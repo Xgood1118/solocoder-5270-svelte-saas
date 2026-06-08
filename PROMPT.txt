@@ -1,0 +1,39 @@
+需求：Svelte + Go 全栈 SaaS 多租户系统，组织 / 成员 / 计费 / 配额 / 邀请 / 审计。
+
+背景：组里想做个 SaaS 工具自用，要支持多组织（每个客户一个 org）、按席位 / 用量计费、配额限制、邀请成员、审计日志。技术栈 SvelteKit + Go（chi router）+ SQLite 单文件 + Stripe 风格 mock 计费。
+
+核心功能：
+- 组织（Org）：创建、切换、删除；每个用户可属于多个 Org，切换 Org 后看到该 Org 的资源
+- 成员 / 角色：owner / admin / member / guest 四级，邀请通过邮件（mock）
+- 资源隔离：所有业务表加 `org_id` 字段，查询自动加 `WHERE org_id = ?`
+- 席位计费：按成员数（10 人 / 月 $X）、按用量（API 调用次数 / 存储 GB）
+- 配额：API 调用 / 存储 / 成员数 / 项目数 都有上限，超额拒绝 + 提示升级套餐
+- 套餐：免费 / 团队 / 企业 三档，升级 / 降级即时生效
+- 发票：mock Stripe，按月生成，记录每次扣费
+- 审计日志：登录、邀请、改套餐、删数据 全记录，按 Org 过滤
+- Webhook：套餐升级、成员邀请、配额超额 触发 webhook
+
+涉及模块：
+- `backend/internal/org/`：组织、成员、角色、邀请
+- `backend/internal/billing/`：计费引擎、套餐、配额、发票
+- `backend/internal/audit/`：审计中间件
+- `backend/internal/webhook/`：webhook 发送、重试
+- `frontend/src/routes/`：orgs、members、billing、settings
+- `frontend/src/lib/`：components、stores、helpers
+- `frontend/src/hooks.server.ts`：Org context middleware
+
+注意事项：
+- Org 切换要存"当前活跃 Org"在 session，前端请求自动带 `X-Org-Id` header
+- 资源查询必须强制 `WHERE org_id = ?` —— 用中间件 + 上下文注入，**禁止**裸 SQL 不带 org_id
+- 删除 Org 是敏感操作：先软删（标记 `deleted_at`），30 天后物理删除，期间可恢复
+- 邀请链接要带 token + 过期时间（7 天），一次性使用
+- 角色变更要审计：日志里写"before_role → after_role"
+- 计费计算要"按比例"：用户月中升级套餐，按当月剩余天数比例扣费
+- 配额超限返回 HTTP 429 + 错误码 `QUOTA_EXCEEDED`，前端弹升级提示
+- Webhook 发送要异步 + 重试：3 次指数退避 + 死信队列 + 签名校验（HMAC-SHA256）
+- 多 Org 用户登录后默认进入上次活跃的 Org，可在切换器里换
+- 审计日志不可删：DELETE 操作只允许"管理员按时间窗口归档"到对象存储
+- Go 路由用 chi（轻量），模板用 html/template（不引入 htmlx）
+- 前端不要把所有 Org 资源一次性加载，按需懒加载
+- 计费 mock 不接真 Stripe，但要 mock 到"模拟金额结算 + 失败重试 + 退款"完整流程
+- 数据库表加 `org_id` 字段 + 联合主键 `(org_id, id)`，跨 Org 不能 join
