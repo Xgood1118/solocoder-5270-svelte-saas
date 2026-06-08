@@ -1,0 +1,1 @@
+前后端都跑不起来。前端 vite 起来登录页能打开但点登录没反应，看了下后端 go build 出个 api.exe 但启动直接报 Failed to connect to database: Binary was compiled with CGO_ENABLED=0, go-sqlite3 requires cgo to work，go-sqlite3 是 cgo 库，set CGO_ENABLED=1 编译又直接 gcc: executable file not found。前端 /dashboard /billing /orgs 这些路由都 500，因为 SSR 拉不到 API。前后端连接完全断的。检查修复一下。
