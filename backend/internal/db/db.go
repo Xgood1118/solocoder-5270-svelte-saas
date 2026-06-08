@@ -5,7 +5,7 @@ import (
 	"database/sql"
 	"time"
 
-	_ "github.com/mattn/go-sqlite3"
+	_ "modernc.org/sqlite"
 )
 
 type contextKey string
@@ -17,7 +17,8 @@ type DB struct {
 }
 
 func New(dbPath string) (*DB, error) {
-	database, err := sql.Open("sqlite3", dbPath+"?_foreign_keys=on&_journal_mode=WAL")
+	dsn := dbPath + "?_pragma=foreign_keys(1)&_pragma=journal_mode(WAL)"
+	database, err := sql.Open("sqlite", dsn)
 	if err != nil {
 		return nil, err
 	}

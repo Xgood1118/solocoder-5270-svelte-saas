@@ -20,6 +20,10 @@ const (
 	OrgRoleKey      contextKey = "org_role"
 )
 
+type SuccessResponse struct {
+	Data interface{} `json:"data"`
+}
+
 type ErrorResponse struct {
 	Error   string `json:"error"`
 	Message string `json:"message"`
@@ -29,12 +33,14 @@ func JSONResponse(w http.ResponseWriter, status int, data interface{}) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	if data != nil {
-		json.NewEncoder(w).Encode(data)
+		json.NewEncoder(w).Encode(SuccessResponse{Data: data})
 	}
 }
 
 func JSONError(w http.ResponseWriter, status int, errorCode, message string) {
-	JSONResponse(w, status, ErrorResponse{
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	json.NewEncoder(w).Encode(ErrorResponse{
 		Error:   errorCode,
 		Message: message,
 	})

@@ -24,6 +24,7 @@ type LoginRequest struct {
 type AuthResponse struct {
 	Token string      `json:"token"`
 	User  interface{} `json:"user"`
+	Orgs  interface{} `json:"orgs"`
 }
 
 func (h *APIHandler) Register(w http.ResponseWriter, r *http.Request) {
@@ -72,9 +73,12 @@ func (h *APIHandler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	orgs := []interface{}{org}
+
 	middleware.JSONResponse(w, http.StatusCreated, AuthResponse{
 		Token: token,
 		User:  user,
+		Orgs:  orgs,
 	})
 }
 
@@ -113,6 +117,7 @@ func (h *APIHandler) Login(w http.ResponseWriter, r *http.Request) {
 	middleware.JSONResponse(w, http.StatusOK, AuthResponse{
 		Token: token,
 		User:  user,
+		Orgs:  orgs,
 	})
 }
 
